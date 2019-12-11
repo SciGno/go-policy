@@ -32,8 +32,6 @@ type StringMatch struct{}
 
 // Validate function
 func (a *StringMatch) Validate(stmntData, requestData interface{}) bool {
-	// fmt.Printf("%T\n", stmntData)
-	// fmt.Printf("%T\n", requestData)
 	if requestData != nil || stmntData != nil {
 		for _, s := range stmntData.([]string) {
 			if s == requestData {
@@ -123,8 +121,6 @@ type TimeRanges struct{}
 
 // Validate function
 func (a *TimeRanges) Validate(stmntData, requestData interface{}) bool {
-	// fmt.Printf("%T\n", stmntData)
-	// fmt.Printf("%T\n", requestData)
 	if requestData != nil && stmntData != nil {
 		switch stmntTimes := stmntData.(type) {
 		case map[string]interface{}:

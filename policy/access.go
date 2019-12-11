@@ -55,7 +55,6 @@ func (p *AccessValidator) validateDeny(req *Request, stmts []Statement) error {
 			e := NewValidationError("policy validation failed")
 			e.Validator = ACTION
 			e.Data = req.Action
-			// e := err.(*ValidationError)
 			e.Statement = s.StatementID
 			e.Location = ACTION
 			return e
