@@ -1,8 +1,10 @@
 package policy
 
-// Validator interface
+// Validator interface validates statement data against request data.
+// In the event that a request does not provide data for the Validator,
+// a nill value will be passed to the requestData parameter.
 type Validator interface {
-	Validate(stmnt, req interface{}) bool
+	Validate(stmntData, requestData interface{}) bool
 }
 
 // Registry struct

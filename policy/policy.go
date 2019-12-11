@@ -36,6 +36,16 @@ type Policy struct {
 	Statement []Statement `json:"statement,omitempty"`
 }
 
+// NewPolicy returns a new policy with the given arguments
+func NewPolicy(id string, name string, version string, statements []Statement) Policy {
+	return Policy{
+		PolicyID:  id,
+		Name:      name,
+		Version:   version,
+		Statement: statements,
+	}
+}
+
 // AllowStatements returns all statements with Effect=Allow
 func (p *Policy) AllowStatements() []Statement {
 	a := []Statement{}

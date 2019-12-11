@@ -1,6 +1,6 @@
 package policy
 
-import "fmt"
+import "strings"
 
 // AccessValidator validates all policies against a given request
 type AccessValidator struct {
@@ -10,6 +10,9 @@ type AccessValidator struct {
 // Validate checks the request against all statements. Effect=Deny statements will be certified first
 // followed by Effect=Allow statements
 func (p *AccessValidator) Validate(req *Request, policies []Policy) error {
+	if len(strings.TrimSpace(req.Action)) == 0 || len(strings.TrimSpace(req.Resource)) == 0 {
+		return NewValidationError("missing request parameters")
+	}
 	for _, pol := range policies {
 		if err := p.validateDeny(req, pol.DenyStatements()); err != nil {
 			e := err.(*ValidationError)
@@ -30,7 +33,7 @@ func (p *AccessValidator) Validate(req *Request, policies []Policy) error {
 // ValidateDeny checks the request against all statements. Effect=Deny is assumed
 func (p *AccessValidator) validateDeny(req *Request, stmts []Statement) error {
 	for _, s := range stmts {
-		if err := p.validateyResource(s.Resource, req); err == nil {
+		if err := p.validateyResource(s.Resource, req); err != nil {
 			e := err.(*ValidationError)
 			e.Statement = s.StatementID
 			e.Location = RESOURCE
@@ -39,7 +42,7 @@ func (p *AccessValidator) validateDeny(req *Request, stmts []Statement) error {
 		if len(s.Condition) > 0 {
 			for name, data := range s.Condition {
 				if err := p.validateyConfition(name, data, req); err == nil {
-					e := NewValidationError("policy validation error")
+					e := NewValidationError("policy validation failed")
 					e.Statement = s.StatementID
 					e.Location = CONDITION
 					e.Validator = name
@@ -48,8 +51,11 @@ func (p *AccessValidator) validateDeny(req *Request, stmts []Statement) error {
 				}
 			}
 		}
-		if err := p.validateyAction(s.Action, req); err != nil {
-			e := err.(*ValidationError)
+		if err := p.validateyAction(s.Action, req); err == nil {
+			e := NewValidationError("policy validation failed")
+			e.Validator = ACTION
+			e.Data = req.Action
+			// e := err.(*ValidationError)
 			e.Statement = s.StatementID
 			e.Location = ACTION
 			return e
@@ -70,8 +76,6 @@ func (p *AccessValidator) validateAllow(req *Request, stmts []Statement) error {
 		}
 		if len(s.Condition) > 0 {
 			for name, data := range s.Condition {
-
-				fmt.Printf("%T\n", data)
 				if err := p.validateyConfition(name, data, req); err != nil {
 					e := err.(*ValidationError)
 					e.Statement = s.StatementID
@@ -96,7 +100,7 @@ func (p *AccessValidator) validateyAction(actions []string, request *Request) er
 			return nil
 		}
 	}
-	e := NewValidationError("policy validation error")
+	e := NewValidationError("policy validation failed")
 	e.Validator = ACTION
 	e.Data = actions
 	return e
@@ -108,7 +112,7 @@ func (p *AccessValidator) validateyResource(resources []string, request *Request
 			return nil
 		}
 	}
-	e := NewValidationError("policy validation error")
+	e := NewValidationError("policy validation failed")
 	e.Validator = RESOURCE
 	e.Data = resources
 	return e
@@ -124,7 +128,7 @@ func (p *AccessValidator) validateyConfition(name string, data interface{}, requ
 			return nil
 		}
 	}
-	e := NewValidationError("policy validation error")
+	e := NewValidationError("policy validation failed")
 	e.Validator = name
 	e.Data = data
 	return e
