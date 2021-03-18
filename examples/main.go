@@ -1,6 +1,10 @@
 package main
 
 import (
+<<<<<<< HEAD
+=======
+	"encoding/json"
+>>>>>>> ec99f40374dc451d23ddb38fbbfa699d4170939d
 	"fmt"
 
 	"github.com/scigno/go-policy/policy"
@@ -27,7 +31,11 @@ var pol = []byte(`
             "condition": {
                 "CIDR": [
                     "192.168.1.0/24",
+<<<<<<< HEAD
                     "10.10.20.12/32"
+=======
+                    "10.10.20.12"
+>>>>>>> ec99f40374dc451d23ddb38fbbfa699d4170939d
                 ],
                 "DateRanges": [
                     {
