@@ -1,10 +1,6 @@
 package main
 
 import (
-<<<<<<< HEAD
-=======
-	"encoding/json"
->>>>>>> ec99f40374dc451d23ddb38fbbfa699d4170939d
 	"fmt"
 
 	"github.com/scigno/go-policy/policy"
@@ -31,11 +27,7 @@ var pol = []byte(`
             "condition": {
                 "CIDR": [
                     "192.168.1.0/24",
-<<<<<<< HEAD
                     "10.10.20.12/32"
-=======
-                    "10.10.20.12"
->>>>>>> ec99f40374dc451d23ddb38fbbfa699d4170939d
                 ],
                 "DateRanges": [
                     {
@@ -109,14 +101,18 @@ func main() {
 	// 	fmt.Printf("%s\n", err)
 	// }
 
-	v := policy.DelimitedValidator{}
+	vr := policy.ValidationEvent{
+		Type:        "Info",
+		Result:      policy.ValidationResult(policy.SUCCESS),
+		PolicyID:    "123",
+		StatementID: "SomeID",
+		Effect:      policy.ALLOW,
+		Action:      "read",
+		Resource:    "res1:a:b",
+		Condition:   []string{"AfterTime:12:00"},
+	}
 
-	fmt.Println("True: ", v.Validate("a", "a"))
-	fmt.Println("True: ", v.Validate("a:*", "a:b"))
-	fmt.Println("True: ", v.Validate("a:b", "a:b"))
-	fmt.Println("True: ", v.Validate("a:b:*", "a:b:c"))
-	fmt.Println("True: ", v.Validate("a:*", "a:b:c:d"))
-	fmt.Println("False: ", v.Validate("a:b:c:*", "a:b"))
-	fmt.Println("True: ", v.Validate("a,*", "a,b"))
+	fmt.Println(vr.PrettyJSON())
+	fmt.Println(vr.JSON())
 
 }

@@ -1,5 +1,10 @@
 package policy
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 const (
 	MISSING_REQ_PARAM = "missing request parameter"
 	NO_MATCH          = "no match"
@@ -13,8 +18,8 @@ const (
 type ValidationResult int
 
 const (
-	FAIL    ValidationResult = 0
 	SUCCESS ValidationResult = 1
+	FAIL    ValidationResult = 0
 )
 
 // ValidationEvent struct
@@ -29,6 +34,18 @@ type ValidationEvent struct {
 	Condition   []string         `json:"condition,omitempty"`
 }
 
-func (s *ValidationEvent) JSON(message string) *ValidationEvent {
-	return s
+func (s *ValidationEvent) JSON() string {
+	data, err := json.Marshal(s)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	return string(data)
+}
+
+func (s *ValidationEvent) PrettyJSON() string {
+	data, err := json.MarshalIndent(s, "", "   ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	return string(data)
 }
