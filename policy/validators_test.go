@@ -76,8 +76,7 @@ func TestActionValidator_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &ActionValidator{}
-			if got := a.Validate(tt.args.statementData, tt.args.requestData); got != tt.want {
+			if got := tt.a.Validate(tt.args.statementData, tt.args.requestData); got != tt.want {
 				t.Errorf("ActionValidator.Validate() = %v, want %v", got, tt.want)
 			}
 		})
@@ -101,8 +100,7 @@ func TestStringMatch_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &StringMatch{}
-			if got := a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
+			if got := tt.a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
 				t.Errorf("StringMatch.Validate() = %v, want %v", got, tt.want)
 			}
 		})
@@ -132,8 +130,7 @@ func TestCIDR_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &CIDR{}
-			if got := c.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
+			if got := tt.c.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
 				t.Errorf("CIDR.Validate() = %v, want %v", got, tt.want)
 			}
 		})
@@ -158,8 +155,7 @@ func TestAfterTime_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &AfterTime{}
-			if got := a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
+			if got := tt.a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
 				t.Errorf("AfterTime.Validate() = %v, want %v", got, tt.want)
 			}
 		})
@@ -184,8 +180,7 @@ func TestBeforeTime_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &BeforeTime{}
-			if got := a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
+			if got := tt.a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
 				t.Errorf("BeforeTime.Validate() = %v, want %v", got, tt.want)
 			}
 		})
@@ -211,8 +206,7 @@ func TestTimeRanges_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &TimeRanges{}
-			if got := a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
+			if got := tt.a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
 				t.Errorf("TimeRanges.Validate() = %v, want %v", got, tt.want)
 			}
 		})

@@ -1,12 +1,12 @@
 package policy
 
 const (
-	// ACTION variable
-	ACTION = "action"
-	// RESOURCE variable
-	RESOURCE = "resource"
-	// CONDITION variable
-	CONDITION = "condition"
+	// // ACTION variable
+	// ACTION = "action"
+	// // RESOURCE variable
+	// RESOURCE = "resource"
+	// // CONDITION variable
+	// CONDITION = "condition"
 	// SID variable
 	SID = "sid"
 	// EFFECT variable
@@ -57,10 +57,8 @@ func (p *Policy) Validate(request *Request, registry *Registry) bool {
 func (p *Policy) ValidateDeny(request *Request, registry *Registry) bool {
 
 	for _, s := range p.Statement {
-		if !s.IsAllow() {
-			if s.Validate(request, registry) {
-				return false
-			}
+		if !s.IsAllow() && s.Validate(request, registry) {
+			return false
 		}
 	}
 
@@ -71,10 +69,8 @@ func (p *Policy) ValidateDeny(request *Request, registry *Registry) bool {
 func (p *Policy) ValidateAllow(request *Request, registry *Registry) bool {
 
 	for _, s := range p.Statement {
-		if s.IsAllow() {
-			if s.Validate(request, registry) {
-				return true
-			}
+		if s.IsAllow() && s.Validate(request, registry) {
+			return true
 		}
 	}
 

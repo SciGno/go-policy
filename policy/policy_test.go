@@ -186,6 +186,18 @@ func TestPolicy_ValidateAllow(t *testing.T) {
 			false,
 		},
 		{
+			"DenyReadBecauseOfCondiution",
+			fields{"", "", "", []Statement{{"", ALLOW, []string{"read"}, "res1:a", map[string]interface{}{"AfterTime": "12:00"}}}},
+			args{&Request{"read", "res1:a", map[string]interface{}{"AfterTime": "11:00"}}, &registry},
+			false,
+		},
+		{
+			"DenyCondiutionNotExists",
+			fields{"", "", "", []Statement{{"", ALLOW, []string{"read"}, "res1:a", map[string]interface{}{"AfterTime": "12:00"}}}},
+			args{&Request{"read", "res1:a", map[string]interface{}{"SomeCondition": "11:00"}}, &registry},
+			false,
+		},
+		{
 			"AllowReasourceFails",
 			fields{"", "", "", []Statement{{"", ALLOW, []string{"read"}, "res1:a", nil}}},
 			args{&Request{"read", "res1:b", nil}, &registry},

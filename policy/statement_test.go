@@ -34,7 +34,7 @@ func TestStatement_Validate(t *testing.T) {
 		},
 		{
 			"Fails_Action",
-			fields{"", ALLOW, []string{"read"}, "res1", nil},
+			fields{"", ALLOW, []string{"read,update"}, "res1", nil},
 			args{&Request{"write", "res1", nil}, &registry},
 			false,
 		},

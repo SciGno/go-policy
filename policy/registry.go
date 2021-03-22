@@ -9,8 +9,8 @@ type Validator interface {
 
 // Registry struct
 type Registry struct {
-	action    Validator
 	resource  Validator
+	action    Validator
 	condition map[string]Validator
 }
 
@@ -28,22 +28,37 @@ func (r *Registry) GetResourceValidator() Validator {
 	return r.resource
 }
 
+// SetResourceValidator raplaces the current resource validator with rv
+func (r *Registry) SetResourceValidator(rv Validator) {
+	r.resource = rv
+}
+
 // GetActionValidator returns an action validator from this registry
 func (r *Registry) GetActionValidator() Validator {
 	return r.action
 }
 
-// GetConditionnValidator returns a named condition validator from this registry
-func (r *Registry) GetConditionnValidator(name string) Validator {
+// SetActionValidator replaces the action validator with av
+func (r *Registry) SetActionValidator(av Validator) {
+	r.action = av
+}
+
+// GetConditionValidator returns a named condition validator from this registry
+func (r *Registry) GetConditionValidator(name string) Validator {
 	return r.condition[name]
 }
 
-// AddConditionnValidator adds a named condition validator to this registry
-func (r *Registry) AddConditionnValidator(name string, validator Validator) {
+// GetConditionValidators returns a new map with all the condition validators from this registry
+func (r *Registry) GetConditionValidators() map[string]Validator {
+	return r.condition
+}
+
+// AddConditionValidator adds a named condition validator to this registry
+func (r *Registry) AddConditionValidator(name string, validator Validator) {
 	r.condition[name] = validator
 }
 
-// RemoveConditionnValidator removes a named condition validator from this registry
-func (r *Registry) RemoveConditionnValidator(name string) {
+// RemoveConditionValidator removes a named condition validator from this registry
+func (r *Registry) RemoveConditionValidator(name string) {
 	delete(r.condition, name)
 }

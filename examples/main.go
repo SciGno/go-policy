@@ -101,18 +101,22 @@ func main() {
 	// 	fmt.Printf("%s\n", err)
 	// }
 
-	vr := policy.ValidationEvent{
-		Type:        "Info",
-		Result:      policy.ValidationResult(policy.SUCCESS),
-		PolicyID:    "123",
-		StatementID: "SomeID",
-		Effect:      policy.ALLOW,
-		Action:      "read",
-		Resource:    "res1:a:b",
-		Condition:   []string{"AfterTime:12:00"},
-	}
+	// vr := policy.ValidationEvent{
+	// 	Type:        "Info",
+	// 	Result:      policy.ValidationResult(policy.SUCCESS),
+	// 	PolicyID:    "123",
+	// 	StatementID: "SomeID",
+	// 	Effect:      policy.ALLOW,
+	// 	Action:      "read",
+	// 	Resource:    "res1:a:b",
+	// 	Condition:   map[string]interface{}{"AfterTime": policy.AfterTime{}},
+	// }
 
-	fmt.Println(vr.PrettyJSON())
-	fmt.Println(vr.JSON())
+	// fmt.Println(vr.PrettyJSON())
+	// fmt.Println(vr.JSON())
 
+	registry := policy.NewRegistry(&policy.DelimitedValidator{}, &policy.ActionValidator{}, map[string]policy.Validator{"AfterTime": &policy.AfterTime{}})
+	request := policy.Request{Action: "read", Resource: "res2", Condition: map[string]interface{}{"AfterTime": "13:00"}}
+	s := policy.NewStatement("Testing", policy.ALLOW, []string{"read"}, "res1", map[string]interface{}{"AfterTime": "12:00"})
+	fmt.Println(s.Validate(&request, &registry))
 }
