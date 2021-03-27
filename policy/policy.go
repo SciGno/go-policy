@@ -1,13 +1,13 @@
 package policy
 
+// PolicyEvent struct
+type PolicyResult struct {
+	PolicyID        string          `json:"policy_id"`
+	IsAllowed       bool            `json:"is_allowed"`
+	StatementResult StatementResult `json:"statement_result"`
+}
+
 const (
-	// // ACTION variable
-	// ACTION = "action"
-	// // RESOURCE variable
-	// RESOURCE = "resource"
-	// // CONDITION variable
-	// CONDITION = "condition"
-	// SID variable
 	SID = "sid"
 	// EFFECT variable
 	EFFECT = "effect"
@@ -40,39 +40,53 @@ func NewPolicy(id string, name string, version string, statements []Statement) P
 }
 
 // Validate all statements against a Request
-func (p *Policy) Validate(request *Request, registry *Registry) bool {
+func (p *Policy) Validate(request *Request, registry *Registry) PolicyResult {
 
-	if !p.ValidateDeny(request, registry) {
-		return false
+	if pr := p.ValidateDeny(request, registry); !pr.IsAllowed {
+		return pr
 	}
 
-	if p.ValidateAllow(request, registry) {
-		return true
+	if pr := p.ValidateAllow(request, registry); pr.IsAllowed {
+		return pr
 	}
 
-	return false
+	return PolicyResult{p.PolicyID, false, StatementResult{}}
 }
 
 // ValidateDeny checks all Effect=Deny statements in this policy
-func (p *Policy) ValidateDeny(request *Request, registry *Registry) bool {
+func (p *Policy) ValidateDeny(request *Request, registry *Registry) PolicyResult {
+
+	pr := PolicyResult{p.PolicyID, true, StatementResult{}}
 
 	for _, s := range p.Statement {
-		if !s.IsAllow() && s.Validate(request, registry) {
-			return false
+		if !s.IsAllow() {
+			sr := s.Validate(request, registry)
+			if sr.Match {
+				pr.IsAllowed = false
+				pr.StatementResult = sr
+				return pr
+			}
 		}
 	}
 
-	return true
+	return pr
 }
 
 // ValidateAllow checks all Effect=Allow statements in this policy
-func (p *Policy) ValidateAllow(request *Request, registry *Registry) bool {
+func (p *Policy) ValidateAllow(request *Request, registry *Registry) PolicyResult {
+
+	pr := PolicyResult{p.PolicyID, false, StatementResult{}}
 
 	for _, s := range p.Statement {
-		if s.IsAllow() && s.Validate(request, registry) {
-			return true
+		if s.IsAllow() {
+			sr := s.Validate(request, registry)
+			if sr.Match {
+				pr.IsAllowed = true
+				pr.StatementResult = sr
+				return pr
+			}
 		}
 	}
 
-	return false
+	return pr
 }

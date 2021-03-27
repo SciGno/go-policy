@@ -1,11 +1,13 @@
 package policy
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestAccessValidator_Validate(t *testing.T) {
 
 	registry := NewRegistry(&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}})
-	request := NewRequest("a", "b", nil)
 
 	type fields struct {
 		registry Registry
@@ -18,43 +20,32 @@ func TestAccessValidator_Validate(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   bool
+		want   ValidationResult
 	}{
 		{
 			"Pass",
 			fields{registry},
 			args{
-				&request,
+				&Request{Resource: "res1", Action: "read", Condition: nil},
 				[]Policy{
-					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", ALLOW, []string{"a"}, "b", map[string]interface{}{"AfterTime": "00:00"})}),
-					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", DENY, []string{"x"}, "b", map[string]interface{}{"AfterTime": "23:59"})}),
+					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "00:00"})}),
+					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", DENY, "res1", []string{"write"}, map[string]interface{}{"AfterTime": "23:59"})}),
 				},
 			},
-			true,
-		},
-		{
-			"Pass",
-			fields{registry},
-			args{
-				&request,
-				[]Policy{
-					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", ALLOW, []string{"a"}, "b", map[string]interface{}{"AfterTime": "00:00"})}),
-					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", DENY, []string{"a"}, "b", map[string]interface{}{"AfterTime": "23:59"})}),
+			ValidationResult{
+				PolicyResult{
+					PolicyID:  "123",
+					IsAllowed: true,
+					StatementResult: StatementResult{
+						Match:       true,
+						Location:    StatementLocation(ALL),
+						StatementID: "",
+						Effect:      Effect(ALLOW),
+						Resource:    "res1",
+						Action:      "read",
+					},
 				},
 			},
-			false,
-		},
-		{
-			"Pass",
-			fields{registry},
-			args{
-				&request,
-				[]Policy{
-					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", ALLOW, []string{"c"}, "b", map[string]interface{}{"AfterTime": "00:00"})}),
-					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", DENY, []string{"e"}, "b", map[string]interface{}{"AfterTime": "23:59"})}),
-				},
-			},
-			false,
 		},
 	}
 	for _, tt := range tests {
@@ -62,7 +53,7 @@ func TestAccessValidator_Validate(t *testing.T) {
 			v := &AccessValidator{
 				registry: tt.fields.registry,
 			}
-			if got := v.Validate(tt.args.request, tt.args.policies); got != tt.want {
+			if got := v.Validate(tt.args.request, tt.args.policies); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AccessValidator.Validate() = %v, want %v", got, tt.want)
 			}
 		})

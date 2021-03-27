@@ -5,6 +5,34 @@ import (
 	"testing"
 )
 
+func TestNewStatement(t *testing.T) {
+	type args struct {
+		id         string
+		effect     Effect
+		resource   string
+		action     []string
+		conditions map[string]interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want Statement
+	}{
+		{
+			"CreateStatement",
+			args{"", ALLOW, "res1", []string{"read"}, nil},
+			NewStatement("", ALLOW, "res1", []string{"read"}, nil),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewStatement(tt.args.id, tt.args.effect, tt.args.resource, tt.args.action, tt.args.conditions); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewStatement() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestStatement_Validate(t *testing.T) {
 
 	registry := NewRegistry(&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}})
@@ -12,8 +40,8 @@ func TestStatement_Validate(t *testing.T) {
 	type fields struct {
 		StatementID string
 		Effect      Effect
-		Action      []string
 		Resource    string
+		Action      []string
 		Condition   map[string]interface{}
 	}
 	type args struct {
@@ -24,48 +52,88 @@ func TestStatement_Validate(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   bool
+		want   StatementResult
 	}{
 		{
 			"Passes_Action",
-			fields{"", ALLOW, []string{"read"}, "res1", nil},
-			args{&Request{"read", "res1", nil}, &registry},
-			true,
+			fields{"", ALLOW, "res1", []string{"read"}, nil},
+			args{&Request{Resource: "res1", Action: "read", Condition: nil}, &registry},
+			StatementResult{Match: true, Location: StatementLocation(ALL), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read"},
 		},
 		{
 			"Fails_Action",
-			fields{"", ALLOW, []string{"read,update"}, "res1", nil},
-			args{&Request{"write", "res1", nil}, &registry},
-			false,
+			fields{"", ALLOW, "res1", []string{"read,update"}, nil},
+			args{&Request{Resource: "res1", Action: "write", Condition: nil}, &registry},
+			StatementResult{Match: false, Location: StatementLocation(ACTION), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "write"},
 		},
 		{
 			"Passes_Resource",
-			fields{"", ALLOW, []string{"read"}, "res1", nil},
-			args{&Request{"read", "res1", nil}, &registry},
-			true,
-		},
-		{
-			"Fails_Resource",
-			fields{"", ALLOW, []string{"read"}, "res1", nil},
-			args{&Request{"read", "res2", nil}, &registry},
-			false,
+			fields{"", ALLOW, "res1", []string{"read"}, nil},
+			args{&Request{"res1", "read", nil}, &registry},
+			StatementResult{Match: true, Location: StatementLocation(ALL), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read"},
 		},
 		{
 			"Passes_Condition",
-			fields{"", ALLOW, []string{"read"}, "res1", map[string]interface{}{"AfterTime": "12:00"}},
-			args{&Request{"read", "res1", map[string]interface{}{"AfterTime": "13:00"}}, &registry},
-			true,
+			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
+			args{&Request{Resource: "res1", Action: "read", Condition: map[string]interface{}{"AfterTime": "13:00"}}, &registry},
+			StatementResult{Match: true, Location: StatementLocation(ALL), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read", Condition: map[string]interface{}{"AfterTime": "13:00"}},
+		},
+		{
+			"Fails_Resource",
+			fields{"", ALLOW, "res1", []string{"read"}, nil},
+			args{&Request{"res2", "read", nil}, &registry},
+			StatementResult{Match: false, Location: StatementLocation(RESOURCE), StatementID: "", Effect: Effect(ALLOW), Resource: "res2"},
 		},
 		{
 			"Fails_Condition",
-			fields{"", ALLOW, []string{"read"}, "res1", map[string]interface{}{"AfterTime": "12:00"}},
-			args{&Request{"read", "res1", map[string]interface{}{"AfterTime": "11:00"}}, &registry},
-			false,
+			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
+			args{&Request{"res1", "read", map[string]interface{}{"AfterTime": "11:00"}}, &registry},
+			StatementResult{Match: false, Location: StatementLocation(CONDITION), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read", Condition: map[string]interface{}{"AfterTime": "11:00"}},
 		},
 		{
 			"Fails_ConditionDoesNotExist",
-			fields{"", ALLOW, []string{"read"}, "res1", map[string]interface{}{"AfterTime": "12:00"}},
-			args{&Request{"read", "res1", map[string]interface{}{"NotExist": "11:00"}}, &registry},
+			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
+			args{&Request{"res1", "read", map[string]interface{}{"NotExist": "11:00"}}, &registry},
+			StatementResult{Match: false, Location: StatementLocation(CONDITION), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read", Condition: map[string]interface{}{"NotExist": "11:00"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Statement{
+				StatementID: tt.fields.StatementID,
+				Effect:      tt.fields.Effect,
+				Resource:    tt.fields.Resource,
+				Action:      tt.fields.Action,
+				Condition:   tt.fields.Condition,
+			}
+			if got := s.Validate(tt.args.request, tt.args.registry); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Statement.Validate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStatement_IsAllow(t *testing.T) {
+	type fields struct {
+		StatementID string
+		Effect      Effect
+		Resource    string
+		Action      []string
+		Condition   map[string]interface{}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			"IsAllow",
+			fields{"", ALLOW, "res1", []string{"read,update"}, nil},
+			true,
+		},
+		{
+			"IsDeny",
+			fields{"", DENY, "res1", []string{"read,update"}, nil},
 			false,
 		},
 	}
@@ -74,41 +142,12 @@ func TestStatement_Validate(t *testing.T) {
 			s := &Statement{
 				StatementID: tt.fields.StatementID,
 				Effect:      tt.fields.Effect,
-				Action:      tt.fields.Action,
 				Resource:    tt.fields.Resource,
+				Action:      tt.fields.Action,
 				Condition:   tt.fields.Condition,
 			}
-			got := s.Validate(tt.args.request, tt.args.registry)
-			if got != tt.want {
-				t.Errorf("Statement.Validate() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNewStatement(t *testing.T) {
-	type args struct {
-		id         string
-		effect     Effect
-		action     []string
-		resource   string
-		conditions map[string]interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want Statement
-	}{
-		{
-			"CreateStatement",
-			args{"", ALLOW, []string{"read"}, "res1", nil},
-			NewStatement("", ALLOW, []string{"read"}, "res1", nil),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewStatement(tt.args.id, tt.args.effect, tt.args.action, tt.args.resource, tt.args.conditions); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewStatement() = %v, want %v", got, tt.want)
+			if got := s.IsAllow(); got != tt.want {
+				t.Errorf("Statement.IsAllow() = %v, want %v", got, tt.want)
 			}
 		})
 	}
