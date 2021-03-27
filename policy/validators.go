@@ -14,22 +14,22 @@ type DelimitedValidator struct{}
 func (d *DelimitedValidator) Validate(statementData, requestData interface{}) bool {
 
 	if requestData != nil || statementData != nil {
-		sTmp := strings.Split(statementData.(string), ":")
-		rTmp := strings.Split(requestData.(string), ":")
+		statementDataArray := strings.Split(statementData.(string), ":")
+		requestDataArray := strings.Split(requestData.(string), ":")
 
-		if len(rTmp) < len(sTmp) {
+		if len(requestDataArray) < len(statementDataArray) {
 			return false
 		}
 
-		for i, v := range rTmp {
-			if i > len(sTmp)-1 {
-				if sTmp[i-1] != "*" {
+		for i, v := range requestDataArray {
+			if i > len(statementDataArray)-1 {
+				if statementDataArray[i-1] != "*" {
 					return false
 				}
 				return true
 			}
 
-			if v != sTmp[i] && sTmp[i] != "*" {
+			if v != statementDataArray[i] && statementDataArray[i] != "*" {
 				return false
 			}
 		}

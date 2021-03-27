@@ -58,43 +58,87 @@ func TestStatement_Validate(t *testing.T) {
 			"Passes_Action",
 			fields{"", ALLOW, "res1", []string{"read"}, nil},
 			args{&Request{Resource: "res1", Action: "read", Condition: nil}, &registry},
-			StatementResult{Match: true, Location: StatementLocation(ALL), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read"},
+			StatementResult{
+				Match:       true,
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      "read",
+			},
 		},
 		{
 			"Fails_Action",
 			fields{"", ALLOW, "res1", []string{"read,update"}, nil},
 			args{&Request{Resource: "res1", Action: "write", Condition: nil}, &registry},
-			StatementResult{Match: false, Location: StatementLocation(ACTION), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "write"},
+			StatementResult{
+				Match:       false,
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      "write",
+			},
 		},
 		{
 			"Passes_Resource",
 			fields{"", ALLOW, "res1", []string{"read"}, nil},
 			args{&Request{"res1", "read", nil}, &registry},
-			StatementResult{Match: true, Location: StatementLocation(ALL), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read"},
+			StatementResult{
+				Match:       true,
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      "read",
+			},
 		},
 		{
 			"Passes_Condition",
 			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
 			args{&Request{Resource: "res1", Action: "read", Condition: map[string]interface{}{"AfterTime": "13:00"}}, &registry},
-			StatementResult{Match: true, Location: StatementLocation(ALL), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read", Condition: map[string]interface{}{"AfterTime": "13:00"}},
+			StatementResult{
+				Match:       true,
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      "read",
+				Condition:   map[string]interface{}{"AfterTime": "13:00"},
+			},
 		},
 		{
 			"Fails_Resource",
 			fields{"", ALLOW, "res1", []string{"read"}, nil},
 			args{&Request{"res2", "read", nil}, &registry},
-			StatementResult{Match: false, Location: StatementLocation(RESOURCE), StatementID: "", Effect: Effect(ALLOW), Resource: "res2"},
+			StatementResult{
+				Match:       false,
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res2",
+			},
 		},
 		{
 			"Fails_Condition",
 			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
 			args{&Request{"res1", "read", map[string]interface{}{"AfterTime": "11:00"}}, &registry},
-			StatementResult{Match: false, Location: StatementLocation(CONDITION), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read", Condition: map[string]interface{}{"AfterTime": "11:00"}},
+			StatementResult{
+				Match:       false,
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      "read",
+				Condition:   map[string]interface{}{"AfterTime": "11:00"},
+			},
 		},
 		{
 			"Fails_ConditionDoesNotExist",
 			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
 			args{&Request{"res1", "read", map[string]interface{}{"NotExist": "11:00"}}, &registry},
-			StatementResult{Match: false, Location: StatementLocation(CONDITION), StatementID: "", Effect: Effect(ALLOW), Resource: "res1", Action: "read", Condition: map[string]interface{}{"NotExist": "11:00"}},
+			StatementResult{
+				Match:       false,
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      "read",
+				Condition:   map[string]interface{}{"NotExist": "11:00"},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -107,7 +151,7 @@ func TestStatement_Validate(t *testing.T) {
 				Condition:   tt.fields.Condition,
 			}
 			if got := s.Validate(tt.args.request, tt.args.registry); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Statement.Validate() = %v, want %v", got, tt.want)
+				t.Errorf("\nStatement.Validate() = \n%+v, \nwant \n%+v", got, tt.want)
 			}
 		})
 	}

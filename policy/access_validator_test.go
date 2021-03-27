@@ -38,11 +38,54 @@ func TestAccessValidator_Validate(t *testing.T) {
 					IsAllowed: true,
 					StatementResult: StatementResult{
 						Match:       true,
-						Location:    StatementLocation(ALL),
 						StatementID: "",
 						Effect:      Effect(ALLOW),
 						Resource:    "res1",
 						Action:      "read",
+					},
+				},
+			},
+		},
+		{
+			"Fail",
+			fields{registry},
+			args{
+				&Request{Resource: "res1", Action: "write", Condition: nil},
+				[]Policy{
+					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "00:00"})}),
+					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", DENY, "res1", []string{"write"}, map[string]interface{}{"AfterTime": "23:59"})}),
+				},
+			},
+			ValidationResult{
+				PolicyResult{
+					PolicyID:  "123",
+					IsAllowed: false,
+					StatementResult: StatementResult{
+						Match:       true,
+						StatementID: "",
+						Effect:      Effect(DENY),
+						Resource:    "res1",
+						Action:      "write",
+					},
+				},
+			},
+		},
+		{
+			"FailNoPolicyExists",
+			fields{registry},
+			args{
+				&Request{Resource: "res10", Action: "write", Condition: nil},
+				[]Policy{
+					NewPolicy("123", "PolicyName", "1.0", []Statement{NewStatement("", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "00:00"})}),
+				},
+			},
+			ValidationResult{
+				PolicyResult{
+					PolicyID:  "",
+					IsAllowed: false,
+					StatementResult: StatementResult{
+						Match:       false,
+						StatementID: "",
 					},
 				},
 			},
@@ -54,7 +97,7 @@ func TestAccessValidator_Validate(t *testing.T) {
 				registry: tt.fields.registry,
 			}
 			if got := v.Validate(tt.args.request, tt.args.policies); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AccessValidator.Validate() = %v, want %v", got, tt.want)
+				t.Errorf("\nAccessValidator.Validate() = \n%v, \nwant \n%v", got, tt.want)
 			}
 		})
 	}

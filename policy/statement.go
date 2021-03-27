@@ -8,22 +8,12 @@ import (
 // StatementResult struct
 type StatementResult struct {
 	Match       bool                   `json:"match"`
-	Location    StatementLocation      `json:"location"`
 	StatementID string                 `json:"statement_id"`
 	Effect      Effect                 `json:"effect"`
 	Resource    string                 `json:"resource,omitempty"`
 	Action      string                 `json:"action,omitempty"`
 	Condition   map[string]interface{} `json:"condition,omitempty"`
 }
-
-type StatementLocation int
-
-const (
-	ALL StatementLocation = iota
-	RESOURCE
-	ACTION
-	CONDITION
-)
 
 // Effect type
 type Effect string
@@ -58,43 +48,39 @@ func NewStatement(id string, effect Effect, resource string, action []string, co
 // Validate this statement against the specified request
 func (s *Statement) Validate(request *Request, registry *Registry) StatementResult {
 
-	sr := StatementResult{}
-	sr.StatementID = s.StatementID
-	sr.Effect = s.Effect
-	sr.Match = true
-	sr.Location = StatementLocation(ALL)
+	statementResutl := StatementResult{}
+	statementResutl.StatementID = s.StatementID
+	statementResutl.Effect = s.Effect
+	statementResutl.Match = true
 
-	sr.Resource = request.Resource
+	statementResutl.Resource = request.Resource
 	if !registry.GetResourceValidator().Validate(s.Resource, request.Resource) {
-		sr.Match = false
-		sr.Location = StatementLocation(RESOURCE)
-		return sr
+		statementResutl.Match = false
+		return statementResutl
 	}
 
-	sr.Action = request.Action
+	statementResutl.Action = request.Action
 	if !registry.GetActionValidator().Validate(s.Action, request.Action) {
-		sr.Match = false
-		sr.Location = StatementLocation(ACTION)
-		return sr
+		statementResutl.Match = false
+		return statementResutl
 	}
 
-	sr.Condition = request.Condition
+	statementResutl.Condition = request.Condition
 	for reqCondName, reqCond := range request.Condition {
 		if cv := registry.GetConditionValidator(reqCondName); cv != nil {
 			if c, ok := s.Condition[reqCondName]; ok {
 				if !cv.Validate(c, reqCond) {
-					sr.Match = false
-					sr.Location = StatementLocation(CONDITION)
-					return sr
+					statementResutl.Match = false
+					return statementResutl
 				}
 			}
 		} else {
-			sr.Match = false
-			sr.Location = StatementLocation(CONDITION)
-			return sr
+			statementResutl.Match = false
+			return statementResutl
 		}
 	}
-	return sr
+
+	return statementResutl
 }
 
 // IsAllow returns TRUE if this statement's effect = allow

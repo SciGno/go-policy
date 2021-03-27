@@ -42,51 +42,52 @@ func NewPolicy(id string, name string, version string, statements []Statement) P
 // Validate all statements against a Request
 func (p *Policy) Validate(request *Request, registry *Registry) PolicyResult {
 
-	if pr := p.ValidateDeny(request, registry); !pr.IsAllowed {
-		return pr
+	policyResult := p.ValidateDeny(request, registry)
+	if !policyResult.IsAllowed {
+		return policyResult
 	}
 
-	if pr := p.ValidateAllow(request, registry); pr.IsAllowed {
-		return pr
+	policyResult = p.ValidateAllow(request, registry)
+	if policyResult.IsAllowed {
+		return policyResult
 	}
 
-	return PolicyResult{p.PolicyID, false, StatementResult{}}
+	return policyResult
 }
 
 // ValidateDeny checks all Effect=Deny statements in this policy
 func (p *Policy) ValidateDeny(request *Request, registry *Registry) PolicyResult {
 
-	pr := PolicyResult{p.PolicyID, true, StatementResult{}}
-
-	for _, s := range p.Statement {
-		if !s.IsAllow() {
-			sr := s.Validate(request, registry)
-			if sr.Match {
-				pr.IsAllowed = false
-				pr.StatementResult = sr
-				return pr
+	for _, statement := range p.Statement {
+		if !statement.IsAllow() {
+			statementResult := statement.Validate(request, registry)
+			policyResult := PolicyResult{p.PolicyID, true, statementResult}
+			if statementResult.Match {
+				policyResult.IsAllowed = false
+				policyResult.StatementResult = statementResult
+				return policyResult
 			}
 		}
 	}
 
-	return pr
+	return PolicyResult{p.PolicyID, true, StatementResult{}}
 }
 
 // ValidateAllow checks all Effect=Allow statements in this policy
 func (p *Policy) ValidateAllow(request *Request, registry *Registry) PolicyResult {
 
-	pr := PolicyResult{p.PolicyID, false, StatementResult{}}
+	policyResult := PolicyResult{p.PolicyID, false, StatementResult{}}
 
-	for _, s := range p.Statement {
-		if s.IsAllow() {
-			sr := s.Validate(request, registry)
-			if sr.Match {
-				pr.IsAllowed = true
-				pr.StatementResult = sr
-				return pr
+	for _, statement := range p.Statement {
+		if statement.IsAllow() {
+			statementResult := statement.Validate(request, registry)
+			policyResult.StatementResult = statementResult
+			if statementResult.Match {
+				policyResult.IsAllowed = true
+				return policyResult
 			}
 		}
 	}
 
-	return pr
+	return policyResult
 }
