@@ -196,3 +196,90 @@ func TestStatement_IsAllow(t *testing.T) {
 		})
 	}
 }
+
+func TestStatement_JSON(t *testing.T) {
+	type fields struct {
+		StatementID string
+		Effect      Effect
+		Resource    string
+		Action      []string
+		Condition   map[string]interface{}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			"TestJSON",
+			fields{
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      []string{"read"},
+			},
+			"{\"effect\":\"Allow\",\"resource\":\"res1\",\"action\":[\"read\"]}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Statement{
+				StatementID: tt.fields.StatementID,
+				Effect:      tt.fields.Effect,
+				Resource:    tt.fields.Resource,
+				Action:      tt.fields.Action,
+				Condition:   tt.fields.Condition,
+			}
+			if got := s.JSON(); got != tt.want {
+				t.Errorf("\nStatement.JSON() = \n%v, \nwant \n%v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStatement_PrettyJSON(t *testing.T) {
+	type fields struct {
+		StatementID string
+		Effect      Effect
+		Resource    string
+		Action      []string
+		Condition   map[string]interface{}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			"TestJSON",
+			fields{
+				StatementID: "",
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      []string{"read"},
+			},
+			`{
+   "effect": "Allow",
+   "resource": "res1",
+   "action": [
+      "read"
+   ]
+}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Statement{
+				StatementID: tt.fields.StatementID,
+				Effect:      tt.fields.Effect,
+				Resource:    tt.fields.Resource,
+				Action:      tt.fields.Action,
+				Condition:   tt.fields.Condition,
+			}
+			if got := s.PrettyJSON(); got != tt.want {
+				t.Errorf("Statement.PrettyJSON() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

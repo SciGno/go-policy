@@ -2,7 +2,6 @@ package policy
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 // StatementResult struct
@@ -89,17 +88,11 @@ func (s *Statement) IsAllow() bool {
 }
 
 func (s *Statement) JSON() string {
-	data, err := json.Marshal(s)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
+	data, _ := json.Marshal(s)
 	return string(data)
 }
 
 func (s *Statement) PrettyJSON() string {
-	data, err := json.MarshalIndent(s, "", "   ")
-	if err != nil {
-		fmt.Println("error:", err)
-	}
+	data, _ := json.MarshalIndent(s, "", "   ")
 	return string(data)
 }

@@ -2,7 +2,6 @@ package policy
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 // ValidationResult struct
@@ -11,18 +10,12 @@ type ValidationResult struct {
 }
 
 func (v *ValidationResult) JSON() string {
-	data, err := json.Marshal(v)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
+	data, _ := json.Marshal(v)
 	return string(data)
 }
 
 func (v *ValidationResult) PrettyJSON() string {
-	data, err := json.MarshalIndent(v, "", "   ")
-	if err != nil {
-		fmt.Println("error:", err)
-	}
+	data, _ := json.MarshalIndent(v, "", "   ")
 	return string(data)
 }
 

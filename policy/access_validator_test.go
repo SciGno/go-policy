@@ -102,3 +102,91 @@ func TestAccessValidator_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestValidationResult_JSON(t *testing.T) {
+	type fields struct {
+		PolicyResult PolicyResult
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			"TestJSON",
+			fields{
+				PolicyResult: PolicyResult{
+					PolicyID:  "123",
+					IsAllowed: true,
+					StatementResult: StatementResult{
+						Match:       true,
+						StatementID: "",
+						Effect:      Effect(ALLOW),
+						Resource:    "res1",
+						Action:      "read",
+					},
+				},
+			},
+			"{\"policy_id\":\"123\",\"is_allowed\":true,\"statement_result\":{\"match\":true,\"statement_id\":\"\",\"effect\":\"Allow\",\"resource\":\"res1\",\"action\":\"read\"}}",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &ValidationResult{
+				PolicyResult: tt.fields.PolicyResult,
+			}
+			if got := v.JSON(); got != tt.want {
+				t.Errorf("\nValidationResult.JSON() = \n%v, \nwant \n%v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidationResult_PrettyJSON(t *testing.T) {
+	type fields struct {
+		PolicyResult PolicyResult
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			"TestJSON",
+			fields{
+				PolicyResult: PolicyResult{
+					PolicyID:  "123",
+					IsAllowed: true,
+					StatementResult: StatementResult{
+						Match:       true,
+						StatementID: "456",
+						Effect:      Effect(ALLOW),
+						Resource:    "res1",
+						Action:      "read",
+					},
+				},
+			},
+			`{
+   "policy_id": "123",
+   "is_allowed": true,
+   "statement_result": {
+      "match": true,
+      "statement_id": "456",
+      "effect": "Allow",
+      "resource": "res1",
+      "action": "read"
+   }
+}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &ValidationResult{
+				PolicyResult: tt.fields.PolicyResult,
+			}
+			if got := v.PrettyJSON(); got != tt.want {
+				t.Errorf("\nValidationResult.PrettyJSON() = \n%v, \nwant \n%v", got, tt.want)
+			}
+		})
+	}
+}
