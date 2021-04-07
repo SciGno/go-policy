@@ -23,7 +23,9 @@ var pol = []byte(`
                 "update"
             ],
             "condition": {
-                "AfterTime": "12:00"
+                "AfterTime": {
+                    "datetime": "12:00"
+                }
             }
         }
     ]
@@ -39,16 +41,25 @@ func main() {
 	if err := json.Unmarshal(pol, &p); err != nil {
 		fmt.Printf("%s\n", err)
 	}
-	// else {
-	// 	d, err2 := json.MarshalIndent(&p, "", "   ")
-	// 	if err2 != nil {
-	// 		fmt.Printf("%s\n", err)
-	// 	}
-	// 	println(string(d))
-	// }
 
-	registry := policy.NewRegistry(&policy.DelimitedValidator{}, &policy.ActionValidator{}, map[string]policy.Validator{"AfterTime": &policy.AfterTime{}})
-	request := policy.Request{Action: "update", Resource: "us:aws:graphqls", Condition: map[string]interface{}{"AfterTime": "11:00"}}
+	registry := policy.NewRegistry(
+		map[string]policy.ValidatorMap{
+			"AfterTime": policy.NewValidatorMap(map[string]policy.Validator{"datetime": &policy.AfterTime{}, "StringMatch": &policy.StringMatch{}}),
+		},
+	)
+	request := policy.Request{
+		Resource: policy.Input{
+			Value: "us:aws:graphql",
+		},
+		Action: policy.Input{
+			Value: "update",
+		},
+		Metadata: map[string]string{
+			"datetime": "13:00",
+		},
+	}
 
-	fmt.Println(p.Validate(&request, &registry))
+	pr := p.Validate(&request, &registry)
+	data, _ := json.MarshalIndent(pr, "", "   ")
+	fmt.Println(string(data))
 }

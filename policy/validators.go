@@ -8,14 +8,20 @@ import (
 
 // DelimitedValidator returns true if the delimited values are the exactly the same
 // and treats an asterisk ( * ) as a wildcard. Default delimiter is a colon ':'
-type DelimitedValidator struct{}
+type DelimitedValidator struct {
+	Delimiter string
+}
 
 // Validate function
 func (d *DelimitedValidator) Validate(statementData, requestData interface{}) bool {
 
+	if len(d.Delimiter) == 0 {
+		d.Delimiter = ":"
+	}
+
 	if requestData != nil || statementData != nil {
-		statementDataArray := strings.Split(statementData.(string), ":")
-		requestDataArray := strings.Split(requestData.(string), ":")
+		statementDataArray := strings.Split(statementData.(string), d.Delimiter)
+		requestDataArray := strings.Split(requestData.(string), d.Delimiter)
 
 		if len(requestDataArray) < len(statementDataArray) {
 			return false
@@ -54,13 +60,26 @@ func (a *ActionValidator) Validate(statementData, requestData interface{}) bool 
 	return false
 }
 
-// StringMatch returns true if any value in statementData equals any value in requestData
+// StringMatch returns true if statementData is equal to requestData
 type StringMatch struct{}
 
 // Validate function
 func (a *StringMatch) Validate(statementData, requestData interface{}) bool {
 	if requestData != nil || statementData != nil {
-		if strings.Compare(statementData.(string), requestData.(string)) == 0 {
+		if statementData.(string) == requestData.(string) {
+			return true
+		}
+	}
+	return false
+}
+
+// StringNotMatch returns true if statementData is not equal to requestData
+type StringNotMatch struct{}
+
+// Validate function
+func (a *StringNotMatch) Validate(statementData, requestData interface{}) bool {
+	if requestData != nil || statementData != nil {
+		if statementData.(string) != requestData.(string) {
 			return true
 		}
 	}

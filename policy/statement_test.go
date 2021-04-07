@@ -11,7 +11,7 @@ func TestNewStatement(t *testing.T) {
 		effect     Effect
 		resource   string
 		action     []string
-		conditions map[string]interface{}
+		conditions map[string]map[string]string
 	}
 	tests := []struct {
 		name string
@@ -35,14 +35,18 @@ func TestNewStatement(t *testing.T) {
 
 func TestStatement_Validate(t *testing.T) {
 
-	registry := NewRegistry(&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}})
+	registry := NewRegistry(
+		map[string]ValidatorMap{
+			"AfterTime": NewValidatorMap(map[string]Validator{"datetime": &AfterTime{}, "StringMatch": &StringMatch{}}),
+		},
+	)
 
 	type fields struct {
 		StatementID string
 		Effect      Effect
 		Resource    string
 		Action      []string
-		Condition   map[string]interface{}
+		Condition   map[string]map[string]string
 	}
 	type args struct {
 		request  *Request
@@ -54,90 +58,291 @@ func TestStatement_Validate(t *testing.T) {
 		args   args
 		want   StatementResult
 	}{
+		//////////////////////////////////////
+		// testing resources
+		//////////////////////////////////////
 		{
-			"Passes_Action",
+			"AllowStetement_ResourceNotExists",
 			fields{"", ALLOW, "res1", []string{"read"}, nil},
-			args{&Request{Resource: "res1", Action: "read", Condition: nil}, &registry},
+			args{
+				&Request{
+					Resource: Input{
+						Value:     "res2",
+						Validator: "default",
+					},
+				},
+				&registry,
+			},
+			StatementResult{
+				Match:       false,
+				StatementID: "",
+				Processed:   Processed(RESOURCE),
+				Effect:      Effect(ALLOW),
+				Resource:    "res2",
+			},
+		},
+		{
+			"DenyStetement_ResourceNotExists",
+			fields{"", DENY, "res1", []string{"read"}, nil},
+			args{&Request{Resource: Input{Value: "res2", Validator: "default"}}, &registry},
 			StatementResult{
 				Match:       true,
 				StatementID: "",
+				Processed:   Processed(RESOURCE),
+				Effect:      Effect(DENY),
+				Resource:    "res2",
+			},
+		},
+		//////////////////////////////////////
+		// testing actions without conditions
+		//////////////////////////////////////
+		{
+			"AllowStetement_ActionSucceedes",
+			fields{"", ALLOW, "res1", []string{"read"}, nil},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "read", Validator: "default"},
+				},
+				&registry,
+			},
+			StatementResult{
+				Match:       true,
+				StatementID: "",
+				Processed:   Processed(CONDITION),
 				Effect:      Effect(ALLOW),
 				Resource:    "res1",
 				Action:      "read",
 			},
 		},
 		{
-			"Fails_Action",
-			fields{"", ALLOW, "res1", []string{"read,update"}, nil},
-			args{&Request{Resource: "res1", Action: "write", Condition: nil}, &registry},
+			"AllowStetement_ActionFails",
+			fields{"", ALLOW, "res1", []string{"read"}, nil},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "write", Validator: "default"},
+				},
+				&registry,
+			},
 			StatementResult{
 				Match:       false,
 				StatementID: "",
+				Processed:   Processed(ACTION),
 				Effect:      Effect(ALLOW),
 				Resource:    "res1",
 				Action:      "write",
 			},
 		},
 		{
-			"Passes_Resource",
-			fields{"", ALLOW, "res1", []string{"read"}, nil},
-			args{&Request{"res1", "read", nil}, &registry},
+			"DenyStetement_ActionIsDenied",
+			fields{"", DENY, "res1", []string{"read"}, nil},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "read", Validator: "default"},
+				},
+				&registry,
+			},
 			StatementResult{
 				Match:       true,
 				StatementID: "",
-				Effect:      Effect(ALLOW),
+				Processed:   Processed(ACTION),
+				Effect:      Effect(DENY),
 				Resource:    "res1",
 				Action:      "read",
 			},
 		},
 		{
-			"Passes_Condition",
-			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
-			args{&Request{Resource: "res1", Action: "read", Condition: map[string]interface{}{"AfterTime": "13:00"}}, &registry},
+			"DenyStetement_ActionNotInDenyStatement",
+			fields{"", DENY, "res1", []string{"read"}, nil},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "write", Validator: "default"},
+				},
+				&registry,
+			},
+			StatementResult{
+				Match:       false,
+				StatementID: "",
+				Processed:   Processed(CONDITION),
+				Effect:      Effect(DENY),
+				Resource:    "res1",
+				Action:      "write",
+			},
+		},
+
+		//////////////////////////////////
+		// testing actions with conditions
+		//////////////////////////////////
+		{
+			"StatementHasCondition_RequestHasCondition",
+			fields{
+				StatementID: "",
+				Effect:      ALLOW,
+				Resource:    "res1",
+				Action:      []string{"read"},
+				Condition: map[string]map[string]string{
+					"AfterTime": {
+						"datetime": "12:00",
+					},
+				},
+			},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "read", Validator: "default"},
+					Metadata: map[string]string{
+						"datetime": "13:00",
+					},
+				},
+				&registry,
+			},
 			StatementResult{
 				Match:       true,
 				StatementID: "",
+				Processed:   Processed(CONDITION),
 				Effect:      Effect(ALLOW),
 				Resource:    "res1",
 				Action:      "read",
-				Condition:   map[string]interface{}{"AfterTime": "13:00"},
+				Condition: map[string]string{
+					"datetime": "13:00",
+				},
 			},
 		},
 		{
-			"Fails_Resource",
-			fields{"", ALLOW, "res1", []string{"read"}, nil},
-			args{&Request{"res2", "read", nil}, &registry},
-			StatementResult{
-				Match:       false,
+			"StatementHasCondition_RequestDoesNotHaveCondition",
+			fields{
 				StatementID: "",
-				Effect:      Effect(ALLOW),
-				Resource:    "res2",
+				Effect:      ALLOW,
+				Resource:    "res1",
+				Action:      []string{"read"},
+				Condition: map[string]map[string]string{
+					"AfterTime": {
+						"datetime": "12:00",
+					},
+				},
 			},
-		},
-		{
-			"Fails_Condition",
-			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
-			args{&Request{"res1", "read", map[string]interface{}{"AfterTime": "11:00"}}, &registry},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "read", Validator: "default"},
+				},
+				&registry,
+			},
 			StatementResult{
 				Match:       false,
 				StatementID: "",
+				Processed:   Processed(CONDITION),
 				Effect:      Effect(ALLOW),
 				Resource:    "res1",
 				Action:      "read",
-				Condition:   map[string]interface{}{"AfterTime": "11:00"},
 			},
 		},
 		{
-			"Fails_ConditionDoesNotExist",
-			fields{"", ALLOW, "res1", []string{"read"}, map[string]interface{}{"AfterTime": "12:00"}},
-			args{&Request{"res1", "read", map[string]interface{}{"NotExist": "11:00"}}, &registry},
-			StatementResult{
-				Match:       false,
+			"AllowStetement_ActionSucceedesWithCondtion",
+			fields{
 				StatementID: "",
+				Effect:      ALLOW,
+				Resource:    "res1",
+				Action:      []string{"read"},
+				Condition: map[string]map[string]string{
+					"AfterTime": {
+						"datetime": "12:00",
+					},
+				},
+			},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "read", Validator: "default"},
+					Metadata: map[string]string{
+						"datetime": "13:00",
+					},
+				},
+				&registry,
+			},
+			StatementResult{
+				Match:       true,
+				StatementID: "",
+				Processed:   Processed(CONDITION),
 				Effect:      Effect(ALLOW),
 				Resource:    "res1",
 				Action:      "read",
-				Condition:   map[string]interface{}{"NotExist": "11:00"},
+				Condition: map[string]string{
+					"datetime": "13:00",
+				},
+			},
+		},
+		{
+			"AllowStetement_ActionFailsOnCondtion",
+			fields{
+				StatementID: "",
+				Effect:      ALLOW,
+				Resource:    "res1",
+				Action:      []string{"read"},
+				Condition: map[string]map[string]string{
+					"AfterTime": {
+						"datetime": "12:00",
+					},
+				},
+			},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "read", Validator: "default"},
+					Metadata: map[string]string{
+						"datetime": "11:00",
+					},
+				},
+				&registry,
+			},
+			StatementResult{
+				Match:       false,
+				StatementID: "",
+				Processed:   Processed(CONDITION),
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      "read",
+				Condition: map[string]string{
+					"datetime": "11:00",
+				},
+			},
+		},
+		{
+			"AllowStetement_ConditionNotRegistered",
+			fields{
+				StatementID: "",
+				Effect:      ALLOW,
+				Resource:    "res1",
+				Action:      []string{"read"},
+				Condition: map[string]map[string]string{
+					"Other": {
+						"datetime": "12:00",
+					},
+				},
+			},
+			args{
+				&Request{
+					Resource: Input{Value: "res1", Validator: "default"},
+					Action:   Input{Value: "read", Validator: "default"},
+					Metadata: map[string]string{
+						"datetime": "13:00",
+					},
+				},
+				&registry,
+			},
+			StatementResult{
+				Match:       false,
+				StatementID: "",
+				Processed:   Processed(CONDITION),
+				Effect:      Effect(ALLOW),
+				Resource:    "res1",
+				Action:      "read",
+				Condition: map[string]string{
+					"datetime": "13:00",
+				},
 			},
 		},
 	}
@@ -151,7 +356,7 @@ func TestStatement_Validate(t *testing.T) {
 				Condition:   tt.fields.Condition,
 			}
 			if got := s.Validate(tt.args.request, tt.args.registry); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("\nStatement.Validate() = \n%+v, \nwant \n%+v", got, tt.want)
+				t.Errorf("Statement.Validate() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -163,7 +368,7 @@ func TestStatement_IsAllow(t *testing.T) {
 		Effect      Effect
 		Resource    string
 		Action      []string
-		Condition   map[string]interface{}
+		Condition   map[string]map[string]string
 	}
 	tests := []struct {
 		name   string
@@ -203,7 +408,7 @@ func TestStatement_JSON(t *testing.T) {
 		Effect      Effect
 		Resource    string
 		Action      []string
-		Condition   map[string]interface{}
+		Condition   map[string]map[string]string
 	}
 	tests := []struct {
 		name   string
@@ -213,12 +418,12 @@ func TestStatement_JSON(t *testing.T) {
 		{
 			"TestJSON",
 			fields{
-				StatementID: "",
+				StatementID: "Read Only",
 				Effect:      Effect(ALLOW),
 				Resource:    "res1",
 				Action:      []string{"read"},
 			},
-			"{\"effect\":\"Allow\",\"resource\":\"res1\",\"action\":[\"read\"]}",
+			"{\"sid\":\"Read Only\",\"effect\":\"Allow\",\"resource\":\"res1\",\"action\":[\"read\"]}",
 		},
 	}
 
@@ -244,7 +449,7 @@ func TestStatement_PrettyJSON(t *testing.T) {
 		Effect      Effect
 		Resource    string
 		Action      []string
-		Condition   map[string]interface{}
+		Condition   map[string]map[string]string
 	}
 	tests := []struct {
 		name   string
@@ -254,17 +459,28 @@ func TestStatement_PrettyJSON(t *testing.T) {
 		{
 			"TestJSON",
 			fields{
-				StatementID: "",
+				StatementID: "Read Only",
 				Effect:      Effect(ALLOW),
 				Resource:    "res1",
 				Action:      []string{"read"},
+				Condition: map[string]map[string]string{
+					"AfterTime": {
+						"datetime": "12:00",
+					},
+				},
 			},
 			`{
+   "sid": "Read Only",
    "effect": "Allow",
    "resource": "res1",
    "action": [
       "read"
-   ]
+   ],
+   "condition": {
+      "AfterTime": {
+         "datetime": "12:00"
+      }
+   }
 }`,
 		},
 	}

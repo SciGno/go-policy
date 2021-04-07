@@ -5,72 +5,43 @@ import (
 	"testing"
 )
 
-func TestNewRegistry(t *testing.T) {
-	type args struct {
-		resourceValidator Validator
-		actionValidator   Validator
-		conditionMap      map[string]Validator
-	}
-	tests := []struct {
-		name string
-		args args
-		want Registry
-	}{
-		{
-			"",
-			args{&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}}},
-			NewRegistry(&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}}),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewRegistry(tt.args.resourceValidator, tt.args.actionValidator, tt.args.conditionMap); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewRegistry() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestRegistry_GetResourceValidator(t *testing.T) {
-
+func TestValidatorMap_GetValidator(t *testing.T) {
 	type fields struct {
-		resource  Validator
-		action    Validator
-		condition map[string]Validator
+		validators map[string]Validator
+	}
+	type args struct {
+		name string
 	}
 	tests := []struct {
 		name   string
 		fields fields
+		args   args
 		want   Validator
 	}{
 		{
-			"AfterTime",
-			fields{&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}}},
-			&DelimitedValidator{},
+			"GetStringMatchValidator",
+			fields{
+				map[string]Validator{"CIDR": &CIDR{}, "StringMatch": &StringMatch{}},
+			},
+			args{"StringMatch"},
+			&StringMatch{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Registry{
-				resource:  tt.fields.resource,
-				action:    tt.fields.action,
-				condition: tt.fields.condition,
+			vm := &ValidatorMap{
+				validators: tt.fields.validators,
 			}
-			if got := r.GetResourceValidator(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Registry.GetResourceValidator() = %v, want %v", got, tt.want)
+			if got := vm.GetValidator(tt.args.name); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ValidatorMap.GetValidator() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestRegistry_GetConditionValidators(t *testing.T) {
-
-	cv := map[string]Validator{"AfterTime": &AfterTime{}}
-
+func TestValidatorMap_GetValidators(t *testing.T) {
 	type fields struct {
-		resource  Validator
-		action    Validator
-		condition map[string]Validator
+		validators map[string]Validator
 	}
 	tests := []struct {
 		name   string
@@ -78,101 +49,62 @@ func TestRegistry_GetConditionValidators(t *testing.T) {
 		want   map[string]Validator
 	}{
 		{
-			"GetConditionValidator",
-			fields{&DelimitedValidator{}, &ActionValidator{}, cv},
-			cv,
+			"GetAllValidators",
+			fields{
+				map[string]Validator{"CIDR": &CIDR{}, "StringMatch": &StringMatch{}},
+			},
+			map[string]Validator{"CIDR": &CIDR{}, "StringMatch": &StringMatch{}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Registry{
-				resource:  tt.fields.resource,
-				action:    tt.fields.action,
-				condition: tt.fields.condition,
+			vm := &ValidatorMap{
+				validators: tt.fields.validators,
 			}
-			if got := r.GetConditionValidators(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Registry.GetConditionValidators() = %v, want %v", got, tt.want)
+			if got := vm.GetValidators(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ValidatorMap.GetValidators() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestRegistry_SetResourceValidator(t *testing.T) {
-
+func TestValidatorMap_RemoveValidator(t *testing.T) {
 	type fields struct {
-		resource  Validator
-		action    Validator
-		condition map[string]Validator
+		validators map[string]Validator
 	}
 	type args struct {
-		rv Validator
+		name string
 	}
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
 	}{
+
 		{
-			"SetResourceValidator",
-			fields{&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}}},
-			args{&ActionValidator{}},
+			"GetAllValidators",
+			fields{
+				map[string]Validator{"CIDR": &CIDR{}, "StringMatch": &StringMatch{}},
+			},
+			args{"StringMatch"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Registry{
-				resource:  tt.fields.resource,
-				action:    tt.fields.action,
-				condition: tt.fields.condition,
+			vm := &ValidatorMap{
+				validators: tt.fields.validators,
 			}
-			r.SetResourceValidator(tt.args.rv)
-			if got := r.GetResourceValidator(); !reflect.DeepEqual(got, tt.args.rv) {
-				t.Errorf("Registry.GetResourceValidator() = %v, want %v", got, tt.args.rv)
+			vm.RemoveValidator(tt.args.name)
+			if got := vm.GetValidator(tt.args.name); !reflect.DeepEqual(got, nil) {
+				t.Errorf("ValidatorMap.GetValidator() = %v, want %v", got, tt.args.name)
 			}
 		})
 	}
 }
 
-func TestRegistry_SetActionValidator(t *testing.T) {
+func TestValidatorMap_AddValidator(t *testing.T) {
 	type fields struct {
-		resource  Validator
-		action    Validator
-		condition map[string]Validator
-	}
-	type args struct {
-		av Validator
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			"SetActionValidator",
-			fields{&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}}},
-			args{&DelimitedValidator{}},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &Registry{
-				resource:  tt.fields.resource,
-				action:    tt.fields.action,
-				condition: tt.fields.condition,
-			}
-			r.SetActionValidator(tt.args.av)
-			if got := r.GetActionValidator(); !reflect.DeepEqual(got, tt.args.av) {
-				t.Errorf("Registry.SetActionValidator() = %v, want %v", got, tt.args.av)
-			}
-		})
-	}
-}
-
-func TestRegistry_AddConditionValidator(t *testing.T) {
-	type fields struct {
-		resource  Validator
-		action    Validator
-		condition map[string]Validator
+		validators map[string]Validator
 	}
 	type args struct {
 		name      string
@@ -184,34 +116,107 @@ func TestRegistry_AddConditionValidator(t *testing.T) {
 		args   args
 	}{
 		{
-			"AddConditionValidator",
-			fields{&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}}},
-			args{"BeforeTime", &BeforeTime{}},
+			"AddStringMatchValidator",
+			fields{
+				map[string]Validator{},
+			},
+			args{"StringMatch", &StringMatch{}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Registry{
-				resource:  tt.fields.resource,
-				action:    tt.fields.action,
-				condition: tt.fields.condition,
+			vm := &ValidatorMap{
+				validators: tt.fields.validators,
 			}
-			r.AddConditionValidator(tt.args.name, tt.args.validator)
-			if got := r.GetConditionValidator(tt.args.name); !reflect.DeepEqual(got, tt.args.validator) {
-				t.Errorf("Registry.AddConditionValidator() = %v, want %v", got, tt.args.validator)
+			vm.AddValidator(tt.args.name, tt.args.validator)
+			if got := vm.GetValidator(tt.args.name); !reflect.DeepEqual(got, tt.args.validator) {
+				t.Errorf("ValidatorMap.GetValidator() = %v, want %v", got, tt.args.name)
 			}
 		})
 	}
 }
 
-func TestRegistry_RemoveConditionValidator(t *testing.T) {
+func TestNewRegistry(t *testing.T) {
+	type args struct {
+		validatorMap map[string]ValidatorMap
+	}
+	tests := []struct {
+		name string
+		args args
+		want Registry
+	}{
+		{
+			"NewRegistry",
+			args{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"DelimitedValidator": &DelimitedValidator{}, "StringMatch": &StringMatch{}}),
+					"action":   NewValidatorMap(map[string]Validator{"ActionValidator": &ActionValidator{}, "StringMatch": &StringMatch{}}),
+					"sourceIP": NewValidatorMap(map[string]Validator{"CIDR": &CIDR{}, "StringMatch": &StringMatch{}}),
+				},
+			},
+			NewRegistry(
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"DelimitedValidator": &DelimitedValidator{}, "StringMatch": &StringMatch{}}),
+					"action":   NewValidatorMap(map[string]Validator{"ActionValidator": &ActionValidator{}, "StringMatch": &StringMatch{}}),
+					"sourceIP": NewValidatorMap(map[string]Validator{"CIDR": &CIDR{}, "StringMatch": &StringMatch{}}),
+				},
+			),
+		},
+		{
+			"MissingResourceValidatorMap",
+			args{
+				map[string]ValidatorMap{
+					"action": NewValidatorMap(map[string]Validator{"default": &ActionValidator{}}),
+				},
+			},
+			Registry{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"default": &DelimitedValidator{}}),
+					"action":   NewValidatorMap(map[string]Validator{"default": &ActionValidator{}}),
+				},
+			},
+		},
+		{
+			"MissingActionValidatorMap",
+			args{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"default": &DelimitedValidator{}}),
+				},
+			},
+			Registry{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"default": &DelimitedValidator{}}),
+					"action":   NewValidatorMap(map[string]Validator{"default": &ActionValidator{}}),
+				},
+			},
+		},
+		{
+			"MissingMap",
+			args{nil},
+			Registry{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"default": &DelimitedValidator{}}),
+					"action":   NewValidatorMap(map[string]Validator{"default": &ActionValidator{}}),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewRegistry(tt.args.validatorMap); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewRegistry() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRegistry_AddValidatorMap(t *testing.T) {
 	type fields struct {
-		resource  Validator
-		action    Validator
-		condition map[string]Validator
+		maps map[string]ValidatorMap
 	}
 	type args struct {
-		name string
+		metaName     string
+		validatorMap ValidatorMap
 	}
 	tests := []struct {
 		name   string
@@ -219,21 +224,242 @@ func TestRegistry_RemoveConditionValidator(t *testing.T) {
 		args   args
 	}{
 		{
-			"AddConditionValidator",
-			fields{&DelimitedValidator{}, &ActionValidator{}, map[string]Validator{"AfterTime": &AfterTime{}, "BeforeTime": &BeforeTime{}}},
-			args{"BeforeTime"},
+			"AddValidatorMap",
+			fields{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"DelimitedValidator": &DelimitedValidator{}}),
+				},
+			},
+			args{
+				"other",
+				ValidatorMap{map[string]Validator{"default": &DelimitedValidator{}}},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &Registry{
-				resource:  tt.fields.resource,
-				action:    tt.fields.action,
-				condition: tt.fields.condition,
+				maps: tt.fields.maps,
 			}
-			r.RemoveConditionValidator(tt.args.name)
-			if got := r.GetConditionValidator(tt.args.name); got != nil {
-				t.Errorf("Registry.AddConditionValidator() = %v, want %v", got, nil)
+			r.AddValidatorMap(tt.args.metaName, tt.args.validatorMap)
+			if got := r.GetValidatorMap(tt.args.metaName); !reflect.DeepEqual(got, tt.args.validatorMap) {
+				t.Errorf("ValidatorMap.GetValidators() = %v, want %v", got, tt.fields.maps[tt.args.metaName])
+			}
+		})
+	}
+}
+
+func TestRegistry_GetValidatorMap(t *testing.T) {
+	type fields struct {
+		maps map[string]ValidatorMap
+	}
+	type args struct {
+		metaName string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   ValidatorMap
+	}{
+		{
+			"GetsValidatorMap",
+			fields{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"DelimitedValidator": &DelimitedValidator{}, "StringMatch": &StringMatch{}}),
+					"action":   NewValidatorMap(map[string]Validator{"ActionValidator": &ActionValidator{}, "StringMatch": &StringMatch{}}),
+					"sourceIP": NewValidatorMap(map[string]Validator{"CIDR": &CIDR{}, "StringMatch": &StringMatch{}}),
+				},
+			},
+			args{"resource"},
+			NewValidatorMap(map[string]Validator{"DelimitedValidator": &DelimitedValidator{}, "StringMatch": &StringMatch{}}),
+		},
+		{
+			"GetsEmptyValidatorMap",
+			fields{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"DelimitedValidator": &DelimitedValidator{}, "StringMatch": &StringMatch{}}),
+					"action":   NewValidatorMap(map[string]Validator{"ActionValidator": &ActionValidator{}, "StringMatch": &StringMatch{}}),
+					"sourceIP": NewValidatorMap(map[string]Validator{"CIDR": &CIDR{}, "StringMatch": &StringMatch{}}),
+				},
+			},
+			args{"resources"},
+			ValidatorMap{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &Registry{
+				maps: tt.fields.maps,
+			}
+			if got := r.GetValidatorMap(tt.args.metaName); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Registry.GetValidatorMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRegistry_RemoveValidatorMap(t *testing.T) {
+	type fields struct {
+		maps map[string]ValidatorMap
+	}
+	type args struct {
+		metaName string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   ValidatorMap
+	}{
+		{
+			"RemovesValidatorMap",
+			fields{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"default": &DelimitedValidator{}}),
+					"action":   NewValidatorMap(map[string]Validator{"ActionValidator": &ActionValidator{}, "StringMatch": &StringMatch{}}),
+				},
+			},
+			args{"resource"},
+			ValidatorMap{
+				map[string]Validator{"default": &DelimitedValidator{}},
+			},
+		},
+		{
+			"RemovesValidatorMap",
+			fields{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"default": &DelimitedValidator{}}),
+					"action":   NewValidatorMap(map[string]Validator{"ActionValidator": &ActionValidator{}, "StringMatch": &StringMatch{}}),
+				},
+			},
+			args{"resources"},
+			ValidatorMap{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &Registry{
+				maps: tt.fields.maps,
+			}
+			if got := r.RemoveValidatorMap(tt.args.metaName); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Registry.RemoveValidatorMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRegistry_AddValidator(t *testing.T) {
+	type fields struct {
+		maps map[string]ValidatorMap
+	}
+	type args struct {
+		metaName      string
+		validatorName string
+		validator     Validator
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			"AddValidator",
+			fields{map[string]ValidatorMap{}},
+			args{"resource", "match", &StringMatch{}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &Registry{
+				maps: tt.fields.maps,
+			}
+			r.AddValidator(tt.args.metaName, tt.args.validatorName, tt.args.validator)
+			if got := r.GetValidator(tt.args.metaName, tt.args.validatorName); !reflect.DeepEqual(got, tt.args.validator) {
+				t.Errorf("Registry.RemoveValidatorMap() = %v, want %v", got, tt.args.validator)
+			}
+		})
+	}
+}
+
+func TestRegistry_RemoveValidator(t *testing.T) {
+	type fields struct {
+		maps map[string]ValidatorMap
+	}
+	type args struct {
+		metaName      string
+		validatorName string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   Validator
+	}{
+		{
+			"RemoveValidator",
+			fields{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"ActionValidator": &ActionValidator{}, "match": &StringMatch{}}),
+				},
+			},
+			args{"resource", "match"},
+			&StringMatch{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &Registry{
+				maps: tt.fields.maps,
+			}
+			if got := r.RemoveValidator(tt.args.metaName, tt.args.validatorName); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Registry.RemoveValidator() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRegistry_MetaNameExists(t *testing.T) {
+	type fields struct {
+		maps map[string]ValidatorMap
+	}
+	type args struct {
+		metaName string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			"MetaName_Exists",
+			fields{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"match": &StringMatch{}}),
+				},
+			},
+			args{"resource"},
+			true,
+		},
+		{
+			"MetaName_Does_Not_Exist",
+			fields{
+				map[string]ValidatorMap{
+					"resource": NewValidatorMap(map[string]Validator{"match": &StringMatch{}}),
+				},
+			},
+			args{"resources"},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &Registry{
+				maps: tt.fields.maps,
+			}
+			if got := r.MetaNameExists(tt.args.metaName); got != tt.want {
+				t.Errorf("Registry.MetaNameExists() = %v, want %v", got, tt.want)
 			}
 		})
 	}

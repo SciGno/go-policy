@@ -1,64 +1,101 @@
 package policy
 
 // Validator interface validates statement data against request data.
-// In the event that a request does not provide data for the Validator,
-// a nill value will be passed to the requestData parameter.
 type Validator interface {
 	Validate(stmntData, requestData interface{}) bool
 }
-
-// Registry struct
-type Registry struct {
-	resource  Validator
-	action    Validator
-	condition map[string]Validator
+type ValidatorMap struct {
+	validators map[string]Validator
 }
 
-// NewRegistry func
-func NewRegistry(resourceValidator, actionValidator Validator, conditionMap map[string]Validator) Registry {
-	return Registry{
-		resource:  resourceValidator,
-		action:    actionValidator,
-		condition: conditionMap,
+func NewValidatorMap(validatorMap map[string]Validator) ValidatorMap {
+	return ValidatorMap{
+		validators: validatorMap,
 	}
 }
 
-// GetResourceValidator returns a resource validator from this registry
-func (r *Registry) GetResourceValidator() Validator {
-	return r.resource
+func (vm *ValidatorMap) AddValidator(name string, validator Validator) {
+	vm.validators[name] = validator
 }
 
-// SetResourceValidator raplaces the current resource validator with rv
-func (r *Registry) SetResourceValidator(rv Validator) {
-	r.resource = rv
+func (vm *ValidatorMap) RemoveValidator(name string) {
+	delete(vm.validators, name)
 }
 
-// GetActionValidator returns an action validator from this registry
-func (r *Registry) GetActionValidator() Validator {
-	return r.action
+func (vm *ValidatorMap) GetValidator(name string) Validator {
+	return vm.validators[name]
 }
 
-// SetActionValidator replaces the action validator with av
-func (r *Registry) SetActionValidator(av Validator) {
-	r.action = av
+func (vm *ValidatorMap) GetValidators() map[string]Validator {
+	return vm.validators
 }
 
-// GetConditionValidator returns a named condition validator from this registry
-func (r *Registry) GetConditionValidator(name string) Validator {
-	return r.condition[name]
+type Registry struct {
+	maps map[string]ValidatorMap
 }
 
-// GetConditionValidators returns a new map with all the condition validators from this registry
-func (r *Registry) GetConditionValidators() map[string]Validator {
-	return r.condition
+// NewRegistry return an empty Registry if a ValidatorMap with "resource" and "action"
+// are not provided in the validatorMap parameter.
+func NewRegistry(validatorMap map[string]ValidatorMap) Registry {
+
+	registry := Registry{
+		maps: map[string]ValidatorMap{},
+	}
+
+	if validatorMap != nil {
+		registry.maps = validatorMap
+	}
+
+	if _, ok := registry.maps[string(RESOURCE)]; !ok {
+		registry.AddValidatorMap(
+			string(RESOURCE),
+			NewValidatorMap(map[string]Validator{"default": &DelimitedValidator{}}),
+		)
+	}
+
+	if _, ok := registry.maps[string(ACTION)]; !ok {
+		registry.AddValidatorMap(
+			string(ACTION),
+			NewValidatorMap(map[string]Validator{"default": &ActionValidator{}}),
+		)
+	}
+
+	return registry
 }
 
-// AddConditionValidator adds a named condition validator to this registry
-func (r *Registry) AddConditionValidator(name string, validator Validator) {
-	r.condition[name] = validator
+func (r *Registry) AddValidatorMap(metaName string, validatorMap ValidatorMap) {
+	r.maps[metaName] = validatorMap
 }
 
-// RemoveConditionValidator removes a named condition validator from this registry
-func (r *Registry) RemoveConditionValidator(name string) {
-	delete(r.condition, name)
+func (r *Registry) GetValidatorMap(metaName string) ValidatorMap {
+	return r.maps[metaName]
+}
+
+func (r *Registry) RemoveValidatorMap(metaName string) ValidatorMap {
+	validatorMap := r.maps[metaName]
+	delete(r.maps, metaName)
+	return validatorMap
+}
+
+func (r *Registry) AddValidator(metaName, validatorName string, validator Validator) {
+	r.maps[metaName] = NewValidatorMap(map[string]Validator{validatorName: validator})
+}
+
+func (r *Registry) GetValidator(metaName, validatorName string) Validator {
+	validatorMap := r.maps[metaName]
+	return validatorMap.GetValidator(validatorName)
+}
+
+func (r *Registry) RemoveValidator(metaName, validatorName string) Validator {
+	validatorMap := r.maps[metaName]
+	validator := validatorMap.GetValidator(validatorName)
+	delete(validatorMap.validators, validatorName)
+	return validator
+}
+
+func (r *Registry) MetaNameExists(metaName string) bool {
+	if len(r.GetValidatorMap(metaName).validators) == 0 {
+		return false
+	}
+	return true
 }

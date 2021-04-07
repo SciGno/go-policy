@@ -24,6 +24,7 @@ func TestDelimitedValidator_Validate(t *testing.T) {
 		{"ExactMatch", &DelimitedValidator{}, args{"a:b", "a:b"}, true},
 		{"NotMatch", &DelimitedValidator{}, args{"a:*", "x:b"}, false},
 		{"MatchWildcard", &DelimitedValidator{}, args{"a:*", "a:b:c"}, true},
+		{"MatchSpecifiedDelimiter", &DelimitedValidator{";"}, args{"a;*", "a;b;c"}, true},
 		{"RequestTooBig", &DelimitedValidator{}, args{"a:b", "a:b:c"}, false},
 		{"RequestTooShort", &DelimitedValidator{}, args{"a:b:c:d", "a:b:c"}, false},
 	}
@@ -208,6 +209,31 @@ func TestTimeRanges_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.a.Validate(tt.args.stmntData, tt.args.requestData); got != tt.want {
 				t.Errorf("TimeRanges.Validate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStringNotMatch_Validate(t *testing.T) {
+	type args struct {
+		statementData interface{}
+		requestData   interface{}
+	}
+	tests := []struct {
+		name string
+		a    *StringNotMatch
+		args args
+		want bool
+	}{
+		{"TestPasses", &StringNotMatch{}, args{"a", "b"}, true},
+		{"TestFails", &StringNotMatch{}, args{"a", "a"}, false},
+		{"TestFails", &StringNotMatch{}, args{}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &StringNotMatch{}
+			if got := a.Validate(tt.args.statementData, tt.args.requestData); got != tt.want {
+				t.Errorf("StringNotMatch.Validate() = %v, want %v", got, tt.want)
 			}
 		})
 	}
